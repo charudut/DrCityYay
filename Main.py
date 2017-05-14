@@ -5,6 +5,7 @@ from flask import Flask, request
 from twilio import twiml
 import json
 import sys
+import asyncio
 
 global matchedLocations
 matchedLocations = []
@@ -16,13 +17,15 @@ recordLimit = 100
 app = Flask(__name__)
 
 def get_location_coordinates(stopID):
-	with open('CTA_BusStops.geojson') as data_file:    
-		data = json.load(data_file)
 
-	for feature in data['features']:
+	with open('CTA_BusStops.geojson') as data_file:
+		data = json.load(data_file)
+    
+	for feature in data['features']:           
+            convertedStopId = "{}.0".format(stopID)
             selected_sys_stop = feature['properties']['SYSTEMSTOP']
             selected_sys_coordinates = feature['geometry']['coordinates']
-            if (str(selected_sys_stop) == stopID):
+            if (str(selected_sys_stop) == convertedStopId):
                 return selected_sys_coordinates
 
 def generateMessageInfo(name, address, phone, isMedicare, isMedicaid):
@@ -50,31 +53,27 @@ async def aggregate_provider_results(gisInfo, limit, skipCount):
 
     if (len(matchedLocations) < 10 and viewedRecords < result.total):
         await aggregate_provider_results(recordLimit, viewedRecords)
+    else:
+        hasMedicare = False
+        # The BetterDoctors API has already sorted results by distance
+        # If time permitted, a more sophisticated ranking algorithm would be nice, i.e.,
+        # Yelp reviews, BetterDoctor Reviews, cross reference with VitalSigns data, etc
 
-loopIndex =0
-hasMedicare = False
-# The BetterDoctors API has already sorted results by distance
-# If time permitted, a more sophisticated ranking algorithm would be nice, i.e.,
-# Yelp reviews, BetterDoctor Reviews, cross reference with VitalSigns data, etc
+        # For now, include the top three locations by geographic distance:
+        # If none of the top three take medicare/medicaid, see if any of the remaining results do
+        # If so, replace the third result with the medicare/medicaid provider
+        for location in matchedLocations:
+            if (len(resultLocations) < 3):
+                resultLocations.append(location)
+                if (location.isMedicare or location.isMedicaid):
+                    hasMedicare = True
 
-# For now, include the top three locations by geographic distance:
-# If none of the top three take medicare/medicaid, see if any of the remaining results do
-# If so, replace the third result with the medicare/medicaid provider
-for location in matchedLocations:
+            if (len(resultLocations) == 3 and hasMedicare == False and (location.isMedicare or location.isMedicaid)):
+                resultLocations.pop()
+                resultLocations.append(location)
 
-    loopIndex += 1
-
-    if (len(resultLocations) < 3):
-        resultLocations.append(location)
-        if (location.isMedicare or location.isMedicaid):
-            hasMedicare = True
-
-    if (len(resultLocations) == 3 and hasMedicare == False and (location.isMedicare or location.isMedicaid)):
-        resultLocations.pop()
-        resultLocations.append(location)
-
-for x in resultLocations:
-    displayMessages.append(generateMessageInfo(x.name, x.locationAddress, x.landlinePhone, x.isMedicare, x.isMedicaid))
+        for x in resultLocations:
+            displayMessages.append(generateMessageInfo(x.name, x.locationAddress, x.landlinePhone, x.isMedicare, x.isMedicaid))
 
 @app.route('/sms', methods=['POST'])
 def sms():
@@ -91,18 +90,19 @@ def sms():
     coordinates = get_location_coordinates(stop_id)
 
     gis = BetterDocModels.geoInfo()
-    gis.latitude = coordinates[0]
-    gis.longitude = coordinates[1]
+    gis.longitude = coordinates[0]
+    gis.latitude = coordinates[1]
+    
     gis.searchAreaMiles = 1
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(aggregate_provider_results(gis, recordLimit, viewedRecords))
+    loop.run_until_complete(aggregate_provider_results(gis, recordLimit, viewedRecords))    
     loop.close()
  
     resp = twiml.Response()
     resp.message('Hello {}, based on your stopID your location is: {}'.format(number, coordinates))
-    print(displayMessages[2])
+    
     return str(resp)
 
 if __name__ == '__main__':
-    app.run()
+        app.run()
