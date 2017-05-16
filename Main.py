@@ -7,6 +7,27 @@ import sys
 import asyncio
 from twilio.rest import Client
 
+'''
+We have not hosted this service on a internet accessible web server.
+In the meantime you can run an instance locally using ngrok.
+
+Steps to get this script running locally on your laptop/desktop
+1) make sure you have a https://www.twilio.com account,
+buy a Twilio number which acts the SMS service number
+and if you have a trial Twilio account, then get the sender's number verified
+
+2) import all the required python packages
+
+3) run the script "python3 Main.py", you should see:
+ // * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit) //
+
+4) now download https://ngrok.com/download and start on port 5000 using the command "./ngrok http 5000"
+
+5) login to your Twilio account, under console > phone-number > edit your Twilio phone number, under messaging, in webhook add the ngrok ssh tunnel address.
+you can follow the instructions here: https://www.youtube.com/watch?v=cZeCz_QOoXw
+
+6) now your service is running, send test sms: MentalHelpSMS <cta_stop_id> to <twilio_number> and you should get 3 suited doctors nearby.
+'''
 global matchedLocations
 matchedLocations = []
 resultLocations = []
@@ -16,6 +37,7 @@ recordLimit = 100
 # Twilio account details
 account_sid = ""
 auth_token = ""
+# Twilio number to which 'MentalHelpSMS <stop_id>' should be sent to'
 fromPhone = ""
 
 app = Flask(__name__)
