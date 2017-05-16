@@ -2,10 +2,10 @@ import BetterDocApi
 import asyncio
 import BetterDocModels
 from flask import Flask, request
-from twilio import twiml
 import json
 import sys
 import asyncio
+from twilio.rest import Client
 
 global matchedLocations
 matchedLocations = []
@@ -13,6 +13,10 @@ resultLocations = []
 displayMessages = []
 viewedRecords = 0
 recordLimit = 100
+# Twilio account details
+account_sid = ""
+auth_token = ""
+fromPhone = ""
 
 app = Flask(__name__)
 
@@ -97,12 +101,40 @@ def sms():
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(aggregate_provider_results(gis, recordLimit, viewedRecords))    
-    loop.close()
  
-    resp = twiml.Response()
-    resp.message('Hello {}, based on your stopID your location is: {}'.format(number, coordinates))
-    
-    return str(resp)
+    emergencyInfo = "If this is an emergency, please contact 911 or 1-800-273-TALK."
+    headerText = "Based on your stop id, here are nearby locations that provide mental health service:"
+        
+    client = Client(account_sid, auth_token)
 
+    message = client.messages.create(
+        to=number, 
+        from_=fromPhone,
+        body=emergencyInfo)
+
+    message = client.messages.create(
+        to=number, 
+        from_=fromPhone,
+        body=headerText)
+
+    cnt = len(displayMessages)
+
+    if cnt > 0:
+        message = client.messages.create(
+            to=number, 
+            from_=fromPhone,
+            body=displayMessages[0])
+    if cnt > 1:
+        message = client.messages.create(
+            to=number, 
+            from_=fromPhone,
+            body=displayMessages[1])
+    if cnt > 2:
+        message = client.messages.create(
+            to=number, 
+            from_=fromPhone,
+            body=displayMessages[2])
+
+    return ""  
 if __name__ == '__main__':
         app.run()

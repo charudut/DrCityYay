@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>944d8093-d33e-4da7-a8b9-8e675762ab8e</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Main.py</StartupFile>
+    <StartupFile>app.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -25,7 +25,7 @@
     <Compile Include="BetterDocApi.py" />
     <Compile Include="BetterDocModels.py" />
     <Compile Include="drcityyay.py" />
-    <Compile Include="Main.py" />
+    <Compile Include="app.py" />
     <Compile Include="MentalSMS2.py" />
   </ItemGroup>
   <ItemGroup>
